@@ -24,17 +24,19 @@ describe "Authentication", type: :system do
           fill_in :registration_user_password_confirmation, with: "DfyvHn425mYAy2HL"
           check :registration_user_tos_agreement
           check :registration_user_newsletter
+          fill_in :registration_user_birthdate, with: "12/12/2021"
+          fill_in :registration_user_postal_code, with: "75020"
           find("*[type=submit]").click
         end
 
-        expect(page).to have_content("You have signed up successfully")
+        expect(page).to have_content("A message with a confirmation link has been sent to your email address. Please follow the link to activate your account.")
       end
     end
 
     context "when using another langage" do
       before do
         within_language_menu do
-          click_link "Castellano"
+          click_link "Français"
         end
       end
 
@@ -49,11 +51,13 @@ describe "Authentication", type: :system do
           fill_in :registration_user_password_confirmation, with: "DfyvHn425mYAy2HL"
           check :registration_user_tos_agreement
           check :registration_user_newsletter
+          fill_in :registration_user_birthdate, with: "12/12/2021"
+          fill_in :registration_user_postal_code, with: "75020"
           find("*[type=submit]").click
         end
 
-        expect(page).to have_content("¡Bienvenida! Te has registrado con éxito.")
-        expect(last_user.locale).to eq("es")
+        expect(page).to have_content("Un message avec un lien de confirmation a été envoyé à votre adresse e-mail. Veuillez suivre le lien pour activer votre compte.")
+        expect(last_user.locale).to eq("fr")
       end
     end
 
@@ -70,6 +74,8 @@ describe "Authentication", type: :system do
           fill_in :registration_user_password_confirmation, with: "DfyvHn425mYAy2HL"
           check :registration_user_tos_agreement
           check :registration_user_newsletter
+          fill_in :registration_user_birthdate, with: "12/12/2021"
+          fill_in :registration_user_postal_code, with: "75020"
           find("*[type=submit]").click
         end
 
@@ -537,10 +543,12 @@ describe "Authentication", type: :system do
             fill_in :registration_user_password_confirmation, with: "DfyvHn425mYAy2HL"
             check :registration_user_tos_agreement
             check :registration_user_newsletter
+            fill_in :registration_user_birthdate, with: "12/12/2021"
+            fill_in :registration_user_postal_code, with: "75020"
             find("*[type=submit]").click
           end
 
-          expect(page).to have_content("You have signed up successfully")
+          expect(page).to have_content("A message with a confirmation link has been sent to your email address. Please follow the link to activate your account.")
         end
       end
     end
