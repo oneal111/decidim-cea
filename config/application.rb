@@ -11,6 +11,14 @@ require "rails/all"
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
+def database_exists?
+  ActiveRecord::Base.connection
+rescue ActiveRecord::NoDatabaseError
+  false
+else
+  true
+end
+
 module DevelopmentApp
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
