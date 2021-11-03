@@ -1,114 +1,62 @@
 # frozen_string_literal: true
 
 module Decidim
-  # This job is part of the machine translation flow. This one is fired every
-  # time a `Decidim::TranslatableResource` is created or updated. If any of the
-  # attributes defines as translatable is modified, then for each of those
-  # attributes this job will schedule a `Decidim::MachineTranslationFieldsJob`.
-  class MachineTranslationResourceJob < ApplicationJob
+  # This job is used by machine translation services to store the result of
+  # a field translation. This way services don't need to care about how to
+  # save it and also enables storing translations asynchronously when the
+  # translation service returns the translated text in a webhook.
+  class MachineTranslationSaveJob < ApplicationJob
     queue_as :default
 
-    # Performs the job.
+    # Performs the job. It won't perform anything if the
+    # `Decidim.machine_translation_service` config is not set.
     #
     # resource - Any kind of `Decidim::TranslatableResource` model instance
-    # previous_changes - A Hash with the set fo changes. This is intended to be
-    #   taken from `resource.previous_changes`, but we need to manually pass
-    #   them to the job because the value gets lost when serializing the
-    #   resource.
-    # source_locale - A Symbol representing the source locale for the translation
-    def perform(resource, previous_changes, source_locale)
-      return unless Decidim.machine_translation_service_klass
+    # field_name - A Symbol representing the name of the field being translated
+    # target_locale - A Symbol representing the target locale for the translation
+    # translated_text - A String with the value of the field_name, translated
+    #   into the target_locale
+    def perform(resource, field_name, target_locale, translated_text)
+      resource.with_lock do
+        if resource[field_name]["machine_translations"].present?
+          resource[field_name]["machine_translations"] = resource[field_name]["machine_translations"].merge(target_locale => translated_text)
+        else
+          resource[field_name] = resource[field_name].merge("machine_translations" => { target_locale => translated_text })
+        end
 
-      @resource = resource
-      @locales_to_be_translated = []
-      translatable_fields = @resource.class.translatable_fields_list.map(&:to_s)
-      translatable_fields.each do |field|
-        next unless @resource[field].is_a?(Hash) && previous_changes.keys.include?(field)
+        # rubocop:disable Rails/SkipsModelValidations
+        resource.update_column field_name.to_sym, resource[field_name]
+        # rubocop:enable Rails/SkipsModelValidations
+      end
 
-        translated_locales = translated_locales_list(field)
-        remove_duplicate_translations(field, translated_locales) if @resource[field]["machine_translations"].present?
+      send_translated_report_notifications(resource) if reported_resource_in_organization_language?(resource, target_locale)
+    end
 
-        next unless default_locale_changed_or_translation_removed(previous_changes, field)
+    private
 
-        @locales_to_be_translated += pending_locales(translated_locales) if @locales_to_be_translated.blank?
-
-        @locales_to_be_translated.each do |target_locale|
-          Decidim::MachineTranslationFieldsJob.perform_later(
-            @resource,
-            field,
-            resource_field_value(
-              previous_changes,
-              field,
-              source_locale
-            ),
-            target_locale,
-            source_locale
-          )
+    def send_translated_report_notifications(reportable)
+      reportable.moderation.reports.each do |report|
+        reportable.moderation.participatory_space.moderators.each do |moderator|
+          Decidim::ReportedMailer.report(moderator, report).deliver_later
         end
       end
     end
 
-    def default_locale_changed_or_translation_removed(previous_changes, field)
-      default_locale = default_locale(@resource)
-      values = previous_changes[field]
-      old_value = values.first
-      new_value = values.last
-      return true unless old_value.is_a?(Hash)
+    def reported_resource_in_organization_language?(resource, target_locale)
+      return unless resource.try(:organization)
 
-      return true if old_value[default_locale] != new_value[default_locale]
+      resource_reported?(resource) && target_locale == resource.organization.default_locale && resource_completely_translated?(resource, target_locale)
+    end
 
-      # In a case where the default locale isn't changed
-      # but a translation of a different locale is deleted
-      # We trigger a job to translate only for that locale
-      if old_value[default_locale] == new_value[default_locale]
-        locales_present = old_value.keys
-        locales_present.each do |locale|
-          @locales_to_be_translated << locale if old_value[locale] != new_value[locale] && new_value[locale] == ""
-        end
+    def resource_reported?(resource)
+      resource.class.included_modules.include?(Decidim::Reportable) && resource.reported?
+    end
+
+    def resource_completely_translated?(resource, target_locale)
+      reported_translatable_fields = resource.reported_attributes & resource.class.translatable_fields_list
+      reported_translatable_fields.all? do |field|
+        resource[field]&.dig("machine_translations", target_locale).present?
       end
-
-      @locales_to_be_translated.present?
-    end
-
-    def resource_field_value(previous_changes, field, source_locale)
-      values = previous_changes[field]
-      new_value = values.last
-      return new_value[source_locale || default_locale(@resource)] if new_value.is_a?(Hash)
-
-      new_value
-    end
-
-    def default_locale(resource)
-      if resource.respond_to? :organization
-        resource.organization.default_locale.to_s
-      else
-        Decidim.available_locales.first.to_s
-      end
-    end
-
-    def translated_locales_list(field)
-      return nil unless @resource[field].is_a? Hash
-
-      translated_locales = []
-      existing_locales = @resource[field].keys - ["machine_translations"]
-      existing_locales.each do |locale|
-        translated_locales << locale if @resource[field][locale].present?
-      end
-
-      translated_locales
-    end
-
-    def remove_duplicate_translations(field, translated_locales)
-      machine_translated_locale = @resource[field]["machine_translations"].keys
-      unless (translated_locales & machine_translated_locale).nil?
-        (translated_locales & machine_translated_locale).each { |key| @resource[field]["machine_translations"].delete key }
-      end
-    end
-
-    def pending_locales(translated_locales)
-      available_locales = @resource.organization.available_locales.map(&:to_s) if @resource.respond_to? :organization
-      available_locales ||= Decidim.available_locales.map(&:to_s)
-      available_locales - translated_locales
     end
   end
 end
