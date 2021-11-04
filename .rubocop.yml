@@ -735,6 +735,10 @@ Layout/MultilineOperationIndentation:
   # But it can be overridden by setting this parameter
   IndentationWidth: ~
 
+Lint/MissingSuper:
+  Exclude:
+    - 'app/commands/**/*'
+
 Style/NumericLiterals:
   MinDigits: 5
 
