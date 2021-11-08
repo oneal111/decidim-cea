@@ -31,6 +31,7 @@ module Decidim
       @subfolder ||= @options[:subfolder].presence || generate_subfolder_name
     end
 
+    # rubocop:disable Style/CombinableLoops
     def retention_dates
       retention_dates = [Time.zone.now.strftime("%Y-%m-%d")]
       (1..13).each do |i|
@@ -45,6 +46,7 @@ module Decidim
       retention_dates << 1.year.ago.strftime("%Y-%m-%d")
       retention_dates.uniq
     end
+    # rubocop:enable Style/CombinableLoops
 
     def execute
       directory = service.directories.get(@options[:s3_bucket], prefix: subfolder)
