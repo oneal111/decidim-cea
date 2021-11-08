@@ -39,7 +39,7 @@ module Decidim
       (1..6).each do |i|
         retention_dates << i.weeks.ago.strftime("%Y-%m-%d")
       end
-      for i in 1..6 do
+      (1..6).each do |i|
         retention_dates << i.months.ago.strftime("%Y-%m-%d")
       end
       retention_dates << 1.year.ago.strftime("%Y-%m-%d")
