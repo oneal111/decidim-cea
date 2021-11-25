@@ -9,7 +9,7 @@ unless Rails.env.test?
     config.enable_processing = true
     # This needs to be set for correct attachment file URLs in emails
     # DON'T FORGET to ALSO set this in `config/application.rb`
-    config.asset_host = "https://entre-vos-mains.alsace.eu"
+    config.asset_host = "https://entre-vos-mains.alsace.eu" if Rails.env.production?
   end
 end
 

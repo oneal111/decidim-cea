@@ -27,7 +27,7 @@ module DevelopmentApp
     config.i18n.load_path += Dir[Rails.root.join("config/locales/**/*.yml").to_s]
     # This needs to be set for correct images URLs in emails
     # DON'T FORGET to ALSO set this in `config/initializers/carrierwave.rb`
-    config.action_mailer.asset_host = "https://entre-vos-mains.alsace.eu"
+    config.action_mailer.asset_host = "https://entre-vos-mains.alsace.eu" if Rails.env.production?
 
     config.backup = config_for(:backup).deep_symbolize_keys
 
