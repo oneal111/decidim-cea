@@ -25,3 +25,6 @@ public/uploads
 public/assets
 
 .env
+
+# Ignore git status file
+git-status.txt 
