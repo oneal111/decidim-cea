@@ -8,7 +8,6 @@ DECIDIM_VERSION = { git: "https://github.com/decidim/decidim.git", branch: "rele
 
 gem "decidim", DECIDIM_VERSION
 
-gem "decidim-consultations", git: "https://github.com/decidim/decidim-module-consultations"
 
 gem "decidim-decidim_awesome", "~> 0.7.0"
 gem "decidim-term_customizer", git: "https://github.com/mainio/decidim-module-term_customizer.git", branch: "master"
