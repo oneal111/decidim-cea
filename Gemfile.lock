@@ -922,6 +922,7 @@ DEPENDENCIES
   byebug (~> 11.0)
   dalli
   decidim!
+  decidim-admin
   decidim-decidim_awesome (~> 0.7.0)
   decidim-dev!
   decidim-term_customizer!
